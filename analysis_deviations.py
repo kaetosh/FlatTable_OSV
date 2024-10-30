@@ -1,72 +1,57 @@
 from logger import logger
-
-from utility_functions import is_accounting_code
-
+import pandas as pd
 
 def revolutions_before_processing(df, file_excel, sign_1c):
-    df_for_check = df[[sign_1c,
-                       'Дебет_начало',
-                       'Кредит_начало',
-                       'Дебет_оборот',
-                       'Кредит_оборот',
-                       'Дебет_конец',
-                       'Кредит_конец']].copy()
-
-    df_for_check['Кор.счет_ЧЕК'] = df_for_check[sign_1c].apply(lambda x: str(x) if is_accounting_code(x) else None).copy()
     
-    df_for_check = df_for_check.dropna(subset=['Кор.счет_ЧЕК'])
-    
-    df_for_check['Кор.счет_ЧЕК'] = df_for_check['Кор.счет_ЧЕК'].fillna('')
-    df_for_check['Кор.счет_ЧЕК'] = df_for_check['Кор.счет_ЧЕК'].astype(str)
-    df_for_check['Кор.счет_ЧЕК'] = df_for_check['Кор.счет_ЧЕК'].apply(lambda x: f'0{x}' if len(x) == 1 else x)
-    
-
-    if '94.Н' in df_for_check['Кор.счет_ЧЕК'].values:
-        df_for_check = df_for_check[
-        (df_for_check['Кор.счет_ЧЕК'] == '94.Н') | 
-        (df_for_check['Кор.счет_ЧЕК'].str.match(r'^\d{2}$') & 
-         ~df_for_check['Кор.счет_ЧЕК'].isin([str(x) for x in range(94, 95)]))
-    ].copy()
-    
+    if df[df[sign_1c] == 'Итого'][['Дебет_начало', 'Кредит_начало', 'Дебет_оборот', 'Кредит_оборот', 'Дебет_конец', 'Кредит_конец']].empty:
+        print('Нет строки ИТОГО в таблице, чтобы свериться!!!!!')
+        return None
     else:
-        df_for_check = df_for_check[df_for_check['Кор.счет_ЧЕК'].str.match(r'^([0]{3}|(\d{2}(\.\d{2,3})?|(\.[А-Яа-я]+)))$')].copy()
-    df_for_check.to_excel('r2r.xlsx')
+        df_for_check = df[df[sign_1c] == 'Итого'][[sign_1c,
+                                                   'Дебет_начало', 
+                                                   'Кредит_начало', 
+                                                   'Дебет_оборот', 
+                                                   'Кредит_оборот', 
+                                                   'Дебет_конец', 
+                                                   'Кредит_конец']].copy()
+        
+        df_for_check.fillna(0, inplace = True)
+        df_for_check['Сальдо_начало_до_обработки'] = df_for_check['Дебет_начало'] - df_for_check['Кредит_начало']
+        df_for_check['Сальдо_конец_до_обработки'] = df_for_check['Дебет_конец'] - df_for_check['Кредит_конец']
+        df_for_check['Оборот_до_обработки'] = df_for_check['Дебет_оборот'] - df_for_check['Кредит_оборот']
+        
+        df_for_check = df_for_check[[
+                                     'Сальдо_начало_до_обработки',
+                                     'Оборот_до_обработки',
+                                     'Сальдо_конец_до_обработки']].copy()
+        df_for_check = df_for_check.reset_index(drop=True)
 
-    df_for_check['Кор.счет_ЧЕК'] = df_for_check['Кор.счет_ЧЕК'].replace('94.Н', '94')
-    
-    df_for_check = df_for_check.reset_index()
+        logger.info(f'{file_excel}: сформировали таблицу с оборотами в разрезе счетов до обработки')
 
-    logger.info(f'{file_excel}: сформировали таблицу с оборотами в разрезе счетов до обработки')
-    
-
-    return df_for_check
+        return df_for_check
 
 def revolutions_after_processing(df, df_for_check, file_excel):
     
-    df_for_check_2 = df[['Корр_счет', 'С кред. счетов', 'В дебет счетов']].copy()
-
-    df_for_check_2['Корр_счет'] = df_for_check_2['Корр_счет'].astype(str).copy()
-
-    df_for_check_2['Кор.счет_ЧЕК'] = df_for_check_2['Корр_счет'].apply(lambda x: str(x[:2]) if (len(x) >= 2 and x != '000') else str(x)).copy()
-
-    df_for_check_2 = df_for_check_2.groupby('Кор.счет_ЧЕК')[['С кред. счетов', 'В дебет счетов']].sum().copy()
-
-    df_for_check_2 = df_for_check_2.reset_index()
-
+    df_for_check_2 = pd.DataFrame()
+    df_for_check_2['Сальдо_начало_после_обработки'] = [df['Дебет_начало'].sum() - df['Кредит_начало'].sum()]
+    df_for_check_2['Оборот_после_обработки'] = [df['Дебет_оборот'].sum() - df['Кредит_оборот'].sum()]
+    df_for_check_2['Сальдо_конец_после_обработки'] = [df['Дебет_конец'].sum() - df['Кредит_конец'].sum()]
+    df_for_check_2 = df_for_check_2.reset_index(drop=True)
 
     # Объединение DataFrame с использованием внешнего соединения
-    merged_df = df_for_check.merge(df_for_check_2, on='Кор.счет_ЧЕК', how='outer',
-                                   suffixes=('_df_for_check', '_df_for_check_2'))
+    merged_df = pd.concat([df_for_check, df_for_check_2], axis=1)
 
     # Заполнение отсутствующих значений нулями
     merged_df = merged_df.infer_objects().fillna(0)
 
     # Вычисление разницы
-    merged_df['Разница_С_кред'] = merged_df['С кред. счетов_df_for_check'] - merged_df['С кред. счетов_df_for_check_2']
-    merged_df['Разница_В_дебет'] = merged_df['В дебет счетов_df_for_check'] - merged_df['В дебет счетов_df_for_check_2']
-
-    merged_df['Разница_С_кред'] = merged_df['Разница_С_кред'].apply(lambda x: round(x))
-    merged_df['Разница_В_дебет'] = merged_df['Разница_В_дебет'].apply(lambda x: round(x))
+    merged_df['Разница_сальдо_нач'] = merged_df['Сальдо_начало_до_обработки'] - merged_df['Сальдо_начало_после_обработки']
+    merged_df['Разница_оборот'] = merged_df['Оборот_до_обработки'] - merged_df['Оборот_после_обработки']
+    merged_df['Разница_сальдо_кон'] = merged_df['Сальдо_конец_до_обработки'] - merged_df['Сальдо_конец_после_обработки']
+    
+    merged_df['Разница_сальдо_нач'] = merged_df['Разница_сальдо_нач'].apply(lambda x: round(x))
+    merged_df['Разница_оборот'] = merged_df['Разница_оборот'].apply(lambda x: round(x))
+    merged_df['Разница_сальдо_кон'] = merged_df['Разница_сальдо_кон'].apply(lambda x: round(x))
 
     merged_df['Исх.файл'] = file_excel
     logger.info(f'{file_excel}: сформировали дополнительную таблицу с отклонениями до и после обработки')
