@@ -45,10 +45,8 @@ def main_process():
         print(f'{file_excel}: успешно загрузили в DataFrame')
 
         # устанавливаем шапку таблицы
-        return_table_header = table_header(df, file_excel)
-        sign_1c = return_table_header[0]
+        sign_1c = table_header(df, file_excel)
         print(f'{file_excel}: успешно создали шапку таблицы')
-
 
         # если есть незаполненные поля группировки (вид номенклатуры например), ставим "не_заполнено"
         handle_missing_values_in_account(df, sign_1c)
@@ -84,12 +82,12 @@ def main_process():
         df = shiftable_level(df, file_excel, True)
         print(f'{file_excel}: сдвинули столбцы, чтобы субсчета располагались в одном столбце')
 
-        df.to_excel('predobrabot.xlsx')
+
         # формируем вспомогательную таблицу с оборотами после обработки
         # записываем данные по отклонениям до/после обработки
-        #df_check = revolutions_after_processing(df, df_for_check, file_excel)
-        # dict_df_check[file_excel] = df_check
-        # print(f'{file_excel}: сформировали вспомогательную таблицу с оборотами после обработки')
+        df_check = revolutions_after_processing(df, df_for_check, file_excel)
+        dict_df_check[file_excel] = df_check
+        print(f'{file_excel}: сформировали вспомогательную таблицу с оборотами после обработки')
 
         # запишем таблицу в словарь
         dict_df[file_excel] = df
@@ -106,16 +104,16 @@ def main_process():
         shiftable_level(result)
         print('повторно сдвинули столбцы уже в сводной таблице, чтобы субсчета располагались в одном столбце')
 
-        #result_check = pd.concat(list(dict_df_check.values()))
+        result_check = pd.concat(list(dict_df_check.values()))
         print('объединили все таблицы с проверкой оборотов в одну')
 
-        #deviation_rpm = (result_check['Разница_С_кред'] + result_check['Разница_В_дебет']).sum()
-        #if deviation_rpm < 1:
-        #    logger.info('\nотклонения по оборотам до и после обработки менее 1')
-        #    print('\nотклонения по оборотам до и после обработки менее 1')
-        #else:
-        #    logger.error('\nобнаружены существенные отклонения по оборотам до и после обработки. См "СВОД_ОТКЛ_анализ_счетов.xlsx"')
-        #    print('\nобнаружены существенные отклонения по оборотам до и после обработки. См "СВОД_ОТКЛ_анализ_счетов.xlsx"')
+        deviation_rpm = (result_check['Разница_сальдо_нач'] + result_check['Разница_оборот'] + result_check['Разница_сальдо_кон']).sum()
+        if deviation_rpm < 1:
+            logger.info('\nотклонения до и после обработки менее 1')
+            print('\nотклонения до и после обработки менее 1')
+        else:
+            logger.error('\nобнаружены существенные отклонения до и после обработки. См "СВОД_ОТКЛ_ОСВ_счетов.xlsx"')
+            print('\nобнаружены существенные отклонения до и после обработки. См "СВОД_ОТКЛ_ОСВ_счетов.xlsx"')
 
         logger.info('\nОбъединение завершено, пытаемся выгрузить файл в excel...')
         print('\nОбъединение завершено, пытаемся выгрузить файл в excel...')
@@ -124,8 +122,8 @@ def main_process():
         logger.error(f'\n\nОшибка при объединении файлов {e}')
     # выгружаем в excel
     try:
-        result.to_excel('summary_files/СВОД_анализ_счетов.xlsx', index=False)
-        #result_check.to_excel('summary_files/СВОД_ОТКЛ_анализ_счетов.xlsx', index=False)
+        result.to_excel('summary_files/СВОД_ОСВ_счетов.xlsx', index=False)
+        result_check.to_excel('summary_files/СВОД_ОТКЛ_ОСВ_счетов.xlsx', index=False)
         logger.info('\nФайл успешно выгружен в excel')
         print('\nФайл успешно выгружен в excel')
     except Exception as e:
