@@ -2,14 +2,14 @@
 Обновляем наименования столбцов на корректные
 """
 
-from settings import target_value
-from logger import logger
+from config import target_value
+from utility_functions import catch_errors, logger_with_spinner
 
 sign_1c_upp = 'Субконто'
 sign_1c_not_upp = 'Счет'
 # Функция для обновления элементов списка
 
-
+@catch_errors()
 def table_header(df, file_excel):
     
 
@@ -24,7 +24,7 @@ def table_header(df, file_excel):
     new_columns = df.loc[index_for_columns-1].to_list()[:number_debet] + end_list
     df.columns = new_columns[:]
 
-    # имена столбцов (в т.ч. np.nan) преобразуем в строки
+    # Названия столбцов (в т.ч. np.nan) преобразуем в строки
     df.columns = df.columns.map(str)
 
     # удаляем данные выше строки с именами столбцов таблицы (наименование отчета, период и т.д.)
@@ -34,13 +34,13 @@ def table_header(df, file_excel):
 
     # переименуем первые два столбца
     df.columns.values[0] = 'Уровень'
-    logger.info(f'{file_excel}: успешно обновили шапку таблицы, удалили строки выше шапки')
+    logger_with_spinner(f'{file_excel}: успешно обновили шапку таблицы, удалили строки выше шапки')
 
     # удаляем пустые строки и столбцы
     df.dropna(axis=0, how='all', inplace=True)
     if 'nan' in df.columns.to_list():
         df.drop(columns=['nan'], inplace=True)
-    logger.info(f'{file_excel}: удалили пустые строки и столбцы')
+    logger_with_spinner(f'{file_excel}: удалили пустые строки и столбцы')
     
     col_0 = df.columns.to_list()
     
@@ -61,14 +61,11 @@ def table_header(df, file_excel):
     try:
         df = df[list_columns_necessary].copy()
     except KeyError as e:
-        print('----------')
-        print(e)
-        print('----------')
         if 'Субконто' in e.args[0]:
             sign_1c = sign_1c_not_upp
             list_columns_necessary_error = ['Уровень', sign_1c, 'Дебет_начало', 'Кредит_начало', 'Дебет_оборот', 'Кредит_оборот', 'Дебет_конец', 'Кредит_конец'] # список необходимых столбцов
         df = df[list_columns_necessary_error].copy()
-        print(f'\n{file_excel}: ОТСУТСТВУЕТ СТОЛБЕЦ Вид связи КА за период\n')
+        logger_with_spinner(f'{file_excel}: ОТСУТСТВУЕТ СТОЛБЕЦ Вид связи КА за период')
     
-    return sign_1c
+    return sign_1c, df
     

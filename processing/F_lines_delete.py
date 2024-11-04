@@ -1,6 +1,9 @@
-from settings import exclude_values
+from config import exclude_values
+from utility_functions import catch_errors
 
-def lines_delete(df, sign_1c, file_excel):  
+
+@catch_errors()
+def lines_delete(df, sign_1c):
     
     df[sign_1c] = df[sign_1c].apply(lambda x: str(x))
     max_level = df['Уровень'].max()

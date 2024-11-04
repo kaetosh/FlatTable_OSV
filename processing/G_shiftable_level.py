@@ -1,7 +1,8 @@
 import pandas as pd
-from utility_functions import is_accounting_code
+from utility_functions import is_accounting_code, catch_errors
 
 
+@catch_errors()
 def shiftable_level(df, file_excel = None, par=False):
     for j in range(5):
         list_lev = [i for i in df.columns.to_list() if 'Level' in i]

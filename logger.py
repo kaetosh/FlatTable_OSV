@@ -1,23 +1,8 @@
-import logging
-import datetime
+import sys
 
-# Создаем путь к лог-файлу с текущей датой
-log_path = f"logs/logs_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log"
+from loguru import logger
 
-# Создаем логгер
-logger = logging.getLogger()
+logger.remove()
 
-# Устанавливаем уровень логирования
-logger.setLevel(logging.INFO)
-
-# Создаем обработчик логов
-handler = logging.FileHandler(log_path, mode='w')
-
-# Создаем формат логов
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-
-# Добавляем формат логов в обработчик логов
-handler.setFormatter(formatter)
-
-# Добавляем обработчик логов в логгер
-logger.addHandler(handler)
+logger.add(sys.stderr, level="INFO", serialize=False)
+#logger.add(sys.stderr, level="INFO", colorize=True, format="<green>{time}</green>|<level>{level}</level> - <level>{message}</level>")

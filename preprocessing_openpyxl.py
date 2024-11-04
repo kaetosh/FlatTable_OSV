@@ -1,20 +1,19 @@
-import sys
-
+import os
+from pathlib import Path
 import openpyxl
-from logger import logger
+import config
+from utility_functions import catch_errors, terminate_script, logger_with_spinner
 
 
+@catch_errors()
 def preprocessing_file_excel(path_file_excel):
-    file_excel = path_file_excel.split('/')[-1]
-    file_excel_treatment = f'preprocessing_files/preprocessing_{file_excel}'
+    file_excel = Path(path_file_excel).name
+    workbook = None
     try:
         workbook = openpyxl.load_workbook(path_file_excel)
     except Exception as e:
-        logger.error(f'''\n{file_excel}: Косячный файл-выгрузка из 1с, пересохраните этот файл и снова запустите скрипт.
-                      Или открыт обрабатываемый файл. Закройте этот файл и снова запустите скрипт.
-                      Ошибка: {e}''')
-        sys.exit()
-
+        terminate_script(f'''{file_excel}: Ошибка обработки файла. Возможно открыт обрабатываемый файл. Закройте этот файл и снова запустите скрипт.
+                                  Ошибка: {e}''')
     sheet = workbook.active
 
     # Снимаем объединение ячеек
@@ -31,14 +30,13 @@ def preprocessing_file_excel(path_file_excel):
     sheet['A1'] = "Уровень"
 
     # Вставляем новый столбец после столбца "Уровень"
-    sheet.insert_cols(idx=2)
-    
-   
-    
-    # Сохраняем файл под новым названием
-    #file_excel_treatment = f'Обработка_{file_excel}'
+    #sheet.insert_cols(idx=2)
+
+    file_excel_treatment = f'{config.folder_path_preprocessing}/preprocessing_{file_excel}'
+    if not os.path.exists(f'{config.folder_path_preprocessing}'):
+        os.makedirs(f'{config.folder_path_preprocessing}')
     workbook.save(file_excel_treatment)
     workbook.close()
-    print(f'\n{file_excel}: сняли объединение ячеек, проставли уровни группировок')
-    logger.info(f'\n{file_excel}: сняли объединение ячеек, проставли уровни группировок и признак курсив в ячейках')
+    logger_with_spinner(
+        f'{file_excel}: сняли объединение ячеек, проставили уровни группировок и признак курсив в ячейках')
     return file_excel_treatment
