@@ -16,7 +16,7 @@ def set_run_count(count):
 
 def increment_run_count():
     current_count = get_run_count()
-    if current_count < 1000:  # Ограничиваем количество запусков, например, 5
+    if current_count < 15:  # Ограничиваем количество запусков, например, 5
         set_run_count(current_count + 1)
         logger_with_spinner(f"Скрипт запущен {current_count + 1} раз(а).")
         return True

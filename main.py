@@ -37,7 +37,7 @@ if increment_run_count():
     spinner_thread.start()
 
     # выбор пользователем папки с обрабатываемыми файлами
-    logger_with_spinner(f"Сейчас будет предложено выбрать папку с файлами Excel - анализами счетов.")
+    logger_with_spinner(f"Сейчас будет предложено выбрать папку с файлами Excel - ОСВ счетов.")
     time.sleep(2)
     select_folder()
 
