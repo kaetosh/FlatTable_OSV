@@ -3,6 +3,7 @@ import threading
 import time
 import pandas as pd
 from pyfiglet import Figlet
+from terminaltexteffects.effects import effect_rain
 
 import config
 from dialog_user import select_folder
@@ -25,7 +26,13 @@ f2 = Figlet(font='ansi_shadow', justify="center")
 
 if increment_run_count():
     # вывод заставки и описания программы
-    print_with_spinner('\n', f1.renderText("Flat table from"), f2.renderText("OSV 1C"))
+    # print_with_spinner('\n', f1.renderText("Flat table from"), f2.renderText("OSV 1C"))
+    effects = [effect_rain.Rain(f1.renderText("Flat table from")),
+               effect_rain.Rain(f1.renderText("OSV 1C"))]
+    for i in effects:
+        with i.terminal_output() as terminal:
+            for frame in i:
+                terminal.print(frame)
     time.sleep(2)
     print_with_spinner(config.start_message)
 
